@@ -38,6 +38,11 @@ void mysort(const T first, const T last, Comp comp) {
     if (n < 2) {
         return;
     }
+    if (n < 8) {
+        insertionSort(first, last, comp);
+        return;
+    }
+
     T pivot = mypartition(first, last, first + n / 2, comp);
 
     auto n1 = std::distance(first, pivot);
