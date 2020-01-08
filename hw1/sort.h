@@ -33,25 +33,28 @@ T mypartition(T first, T last, T pivot, Comp comp) {
 }
 
 template <typename T, typename Comp>
-void mysort(const T first, const T last, Comp comp) {
-    auto n = std::distance(first, last);
-    if (n < 2) {
-        return;
-    }
-    if (n < 8) {
-        insertionSort(first, last, comp);
-        return;
-    }
+void mysort(T first, T last, Comp comp) {
+    while (first < last) {
+        auto n = std::distance(first, last);
+        if (n < 2) {
+            return;
+        }
+        if (n < 8) {
+            insertionSort(first, last, comp);
+            return;
+        }
 
-    T pivot = mypartition(first, last, first + n / 2, comp);
+        T pivot = mypartition(first, last, first + n / 2, comp);
 
-    auto n1 = std::distance(first, pivot);
-    auto n2 = std::distance(pivot + 1, last);
-    if (n1 > n2) {
-        mysort(pivot + 1, last, comp);
-        mysort(first, pivot, comp);
-    } else {
-        mysort(first, pivot, comp);
-        mysort(pivot + 1, last, comp);
+        auto n1 = std::distance(first, pivot);
+        auto n2 = std::distance(pivot + 1, last);
+
+        if (n1 < n2) {
+            mysort(first, pivot, comp);
+            first = pivot + 1;
+        } else {
+            mysort(pivot + 1, last, comp);
+            last = pivot - 1;
+        }
     }
 }
