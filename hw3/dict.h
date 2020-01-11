@@ -16,8 +16,29 @@ public:
 
     size_t size() const;
 
-//    Iterator iterator();
-//    ConstIterator iterator() const;
+    class Iterator {
+    public:
+        friend class Dict<K, V>;
+
+        const V& get() const;
+        void set(const V& value);
+        void next();
+        void prev();
+        void toKey(const K &key);
+        bool hasNext() const;
+        bool hasPrev() const;
+
+    private:
+        explicit Iterator(Dict<K, V>* owner);
+        Dict<K, V>* owner_;
+        ssize_t posInHashTable_;
+        ssize_t posInHashTableList_;
+
+        std::pair<ssize_t , ssize_t > getNextPos() const;
+        std::pair<ssize_t , ssize_t > getPrevPos() const;
+    };
+
+    Iterator iterator();
 
 private:
     using HashTablePair = std::pair<K, V>;
@@ -25,12 +46,102 @@ private:
     using HashTable = std::vector<HashTableItem>;
 
     size_t getHashFittedOnHashTable(const K &key) const;
-    auto getPairHasTableItem_Iterator(const K &key);
+    auto getPairHashTableItem_Iterator(const K &key);
 
     size_t size_;
     HashTable hashTable_;
     size_t hashTableCapacity_;
 };
+
+template<typename K, typename V>
+const V &Dict<K, V>::Iterator::get() const {
+    return owner_->hashTable_[posInHashTable_][posInHashTableList_].second;
+}
+
+template<typename K, typename V>
+void Dict<K, V>::Iterator::set(const V &value) {
+    owner_->hashTable_[posInHashTable_][posInHashTableList_].second = value;
+}
+
+template<typename K, typename V>
+void Dict<K, V>::Iterator::next() {
+    const auto pair = getNextPos();
+    posInHashTable_ = pair.first;
+    posInHashTableList_ = pair.second;
+}
+
+template<typename K, typename V>
+void Dict<K, V>::Iterator::prev() {
+    const auto pair = getPrevPos();
+    posInHashTable_ = pair.first;
+    posInHashTableList_ = pair.second;
+}
+
+template<typename K, typename V>
+bool Dict<K, V>::Iterator::hasNext() const {
+    return getNextPos().first != std::numeric_limits<ssize_t>::max();
+}
+
+template<typename K, typename V>
+bool Dict<K, V>::Iterator::hasPrev() const {
+    return getPrevPos().first != std::numeric_limits<ssize_t>::max();
+}
+
+template<typename K, typename V>
+Dict<K, V>::Iterator::Iterator(Dict<K, V> *owner) : owner_(owner), posInHashTable_(0), posInHashTableList_(-1) {
+    const auto pair = getNextPos();
+    posInHashTable_ = pair.first;
+    posInHashTableList_ = pair.second;
+}
+
+template<typename K, typename V>
+void Dict<K, V>::Iterator::toKey(const K &key) {
+    posInHashTable_ = owner_->getHashFittedOnHashTable(key);
+    assert(owner_->hashTable_[posInHashTable_].size() >= 1);
+    posInHashTableList_ = 0;
+}
+
+template<typename K, typename V>
+std::pair<ssize_t , ssize_t > Dict<K, V>::Iterator::getNextPos() const {
+    auto posInHashTable = posInHashTable_;
+    auto posInHashTableList = posInHashTableList_;
+    const auto& hashTable = owner_->hashTable_;
+    do {
+        ++posInHashTableList;
+        auto& curHashTableList = hashTable[posInHashTable];
+        if (posInHashTableList < curHashTableList.size()) {
+            return {posInHashTable, posInHashTableList};
+        } else {
+            posInHashTableList = -1;
+        }
+        ++posInHashTable;
+    } while(posInHashTable < hashTable.size());
+
+    return {std::numeric_limits<ssize_t>::max(), std::numeric_limits<ssize_t>::max()};
+}
+
+template<typename K, typename V>
+std::pair<ssize_t , ssize_t > Dict<K, V>::Iterator::getPrevPos() const {
+    ssize_t posInHashTable = posInHashTable_;
+    ssize_t posInHashTableList = posInHashTableList_;
+    const auto& hashTable = owner_->hashTable_;
+    auto& curHashTableList = hashTable[posInHashTable];
+    do {
+        --posInHashTableList;
+        if (posInHashTableList >= 0) {
+            return {posInHashTable, posInHashTableList};
+        } else {
+            --posInHashTable;
+            if (posInHashTable >= 0) {
+                posInHashTableList = hashTable[posInHashTable].size();
+            } else {
+                posInHashTableList = 0;
+            }
+        }
+    } while(posInHashTable >= 0);
+
+    return {std::numeric_limits<ssize_t>::max(), std::numeric_limits<ssize_t>::max()};
+}
 
 template<typename K, typename V>
 Dict<K, V>::Dict() : size_(0), hashTableCapacity_(0) {
@@ -157,7 +268,7 @@ size_t Dict<K, V>::getHashFittedOnHashTable(const K &key) const {
 }
 
 template<typename K, typename V>
-auto Dict<K, V>::getPairHasTableItem_Iterator(const K &key) {
+auto Dict<K, V>::getPairHashTableItem_Iterator(const K &key) {
     const auto hash = getHashFittedOnHashTable(key);
     HashTableItem htItem = hashTable_[hash];
 
@@ -170,4 +281,9 @@ auto Dict<K, V>::getPairHasTableItem_Iterator(const K &key) {
     }
 
     return std::make_pair(htItem, foundedIter);
+}
+
+template<typename K, typename V>
+typename Dict<K, V>::Iterator Dict<K, V>::iterator() {
+    return Dict::Iterator(this);
 }

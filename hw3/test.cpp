@@ -64,4 +64,29 @@ TEST_CASE( "dict test", "[basic]" ) {
         d.put(3, 33);
         REQUIRE(d.contains(3));
     }
+
+    SECTION("iterator") {
+        Dict<int, int> d;
+        d.put(1, 11);
+        d.put(2, 22);
+        d.put(3, 33);
+
+        std::set<int> nums;
+        auto it = d.iterator();
+        REQUIRE(!it.hasPrev());
+        REQUIRE(it.hasNext());
+        nums.insert(it.get());
+        it.next();
+        REQUIRE(it.hasPrev());
+        REQUIRE(it.hasNext());
+        nums.insert(it.get());
+        it.next();
+        REQUIRE(it.hasPrev());
+        REQUIRE(!it.hasNext());
+        nums.insert(it.get());
+
+        REQUIRE(nums.count(11));
+        REQUIRE(nums.count(22));
+        REQUIRE(nums.count(33));
+    }
 }
